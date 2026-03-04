@@ -1,4 +1,5 @@
-const OLLAMA_API = 'https://api.avantikatechnology.com/api/generate'
+// Use built-in https module — available in all Node.js versions, no dependencies
+const https = require('https')
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -13,28 +14,54 @@ module.exports = async function (context, req) {
     return
   }
 
-  try {
-    // Force stream:false — Azure Functions return a complete response body
-    const body = { ...req.body, stream: false }
+  // Force stream:false so we get a single JSON response back
+  const body = JSON.stringify({ ...req.body, stream: false })
 
-    const upstream = await fetch(OLLAMA_API, {
+  await new Promise((resolve) => {
+    const options = {
+      hostname: 'api.avantikatechnology.com',
+      path: '/api/generate',
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(body),
+      },
+    }
+
+    const upstream = https.request(options, (res) => {
+      let data = ''
+      res.on('data', (chunk) => { data += chunk })
+      res.on('end', () => {
+        try {
+          context.res = {
+            status: res.statusCode,
+            headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+            body: JSON.stringify(JSON.parse(data)),
+          }
+        } catch {
+          // Upstream returned non-JSON (e.g. NDJSON with stream:true ignored)
+          // Try to extract the first valid JSON line
+          const firstLine = data.split('\n').find(l => l.trim().startsWith('{'))
+          context.res = {
+            status: 200,
+            headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+            body: firstLine ?? JSON.stringify({ response: data, done: true }),
+          }
+        }
+        resolve()
+      })
     })
 
-    const data = await upstream.json()
+    upstream.on('error', (err) => {
+      context.res = {
+        status: 502,
+        headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ error: err.message }),
+      }
+      resolve()
+    })
 
-    context.res = {
-      status: upstream.status,
-      headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    }
-  } catch (err) {
-    context.res = {
-      status: 502,
-      headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ error: err.message }),
-    }
-  }
+    upstream.write(body)
+    upstream.end()
+  })
 }

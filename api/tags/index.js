@@ -1,4 +1,5 @@
-const OLLAMA_API = 'https://api.avantikatechnology.com/api/tags'
+// Use built-in https module — available in all Node.js versions, no dependencies
+const https = require('https')
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -12,20 +13,33 @@ module.exports = async function (context, req) {
     return
   }
 
-  try {
-    const upstream = await fetch(OLLAMA_API, { method: 'GET' })
-    const data = await upstream.json()
-
-    context.res = {
-      status: upstream.status,
-      headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    }
-  } catch (err) {
-    context.res = {
-      status: 502,
-      headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ error: err.message }),
-    }
-  }
+  await new Promise((resolve) => {
+    https.get('https://api.avantikatechnology.com/api/tags', (res) => {
+      let data = ''
+      res.on('data', (chunk) => { data += chunk })
+      res.on('end', () => {
+        try {
+          context.res = {
+            status: res.statusCode,
+            headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+            body: JSON.stringify(JSON.parse(data)),
+          }
+        } catch {
+          context.res = {
+            status: 502,
+            headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ error: 'Upstream parse error', models: [] }),
+          }
+        }
+        resolve()
+      })
+    }).on('error', (err) => {
+      context.res = {
+        status: 502,
+        headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ error: err.message, models: [] }),
+      }
+      resolve()
+    })
+  })
 }
