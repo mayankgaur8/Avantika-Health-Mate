@@ -180,3 +180,20 @@ export async function sendMessage(options: SendMessageOptions): Promise<string> 
 
   return fullText
 }
+
+// Add a simple wrapper for the provided generate endpoint to support non-streaming calls
+export async function askAI(question: string, endpoint = 'http://4.240.92.48:11434'): Promise<string> {
+  const res = await fetch(`${endpoint}/api/generate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ model: 'llama3.1', prompt: question, stream: false }),
+  })
+
+  if (!res.ok) {
+    const txt = await res.text()
+    throw new Error(`AI request failed ${res.status}: ${txt}`)
+  }
+
+  const data = await res.json() as { response?: string }
+  return data.response ?? ''
+}
