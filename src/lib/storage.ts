@@ -138,7 +138,7 @@ export const profileStore = {
 
 const DEFAULT_SETTINGS: AppSettings = {
   ollamaBaseUrl: 'https://api.avantikatechnology.com/api',
-  ollamaModel: 'llama3.1',
+  ollamaModel: 'llama3.1:latest',
   ollamaVisionModel: 'llava',
   darkMode: false,
   notificationsEnabled: false,

@@ -96,28 +96,27 @@ export interface SendMessageOptions {
   onToken?: (token: string) => void
 }
 
+// Build a single prompt string from conversation history for /api/generate
+function buildPrompt(
+  messages: { role: 'user' | 'assistant'; content: string }[],
+  userMessage: string
+): string {
+  const lines: string[] = []
+  for (const m of messages) {
+    lines.push(m.role === 'user' ? `Human: ${m.content}` : `Assistant: ${m.content}`)
+  }
+  lines.push(`Human: ${userMessage}`)
+  lines.push('Assistant:')
+  return lines.join('\n')
+}
+
 export async function sendMessage(options: SendMessageOptions): Promise<string> {
   const { baseUrl, model, messages, userMessage, imageBase64, onToken } = options
 
-  // Build Ollama message history
-  const history: OllamaChatMessage[] = messages.map((m) => ({
-    role: m.role,
-    content: m.content,
-  }))
-
-  // Current user message
-  const currentMsg: OllamaChatMessage = {
-    role: 'user',
-    content: userMessage,
-  }
-  if (imageBase64) {
-    currentMsg.images = [imageBase64]
-  }
-
-  const payload = {
+  const payload: Record<string, unknown> = {
     model,
+    prompt: buildPrompt(messages, userMessage),
     system: HEALTHMATE_SYSTEM_PROMPT,
-    messages: [...history, currentMsg],
     stream: !!onToken,
     options: {
       temperature: 0.7,
@@ -125,7 +124,11 @@ export async function sendMessage(options: SendMessageOptions): Promise<string> 
     },
   }
 
-  const response = await fetch(`${baseUrl}/chat`, {
+  if (imageBase64) {
+    payload.images = [imageBase64]
+  }
+
+  const response = await fetch(`${baseUrl}/generate`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
@@ -137,12 +140,12 @@ export async function sendMessage(options: SendMessageOptions): Promise<string> 
   }
 
   if (!onToken) {
-    // Non-streaming
-    const data = await response.json() as { message: { content: string } }
-    return data.message.content
+    // Non-streaming: /generate returns { response: string }
+    const data = await response.json() as { response: string }
+    return data.response
   }
 
-  // Streaming: read NDJSON lines
+  // Streaming: NDJSON lines with { response: string, done: boolean }
   const reader = response.body?.getReader()
   if (!reader) throw new Error('No response body')
 
@@ -162,11 +165,8 @@ export async function sendMessage(options: SendMessageOptions): Promise<string> 
       const trimmed = line.trim()
       if (!trimmed) continue
       try {
-        const chunk = JSON.parse(trimmed) as {
-          message?: { content: string }
-          done: boolean
-        }
-        const token = chunk.message?.content ?? ''
+        const chunk = JSON.parse(trimmed) as { response?: string; done: boolean }
+        const token = chunk.response ?? ''
         if (token) {
           fullText += token
           onToken(token)
@@ -188,7 +188,7 @@ export async function askAI(question: string, endpoint = DEFAULT_API_BASE): Prom
   const res = await fetch(`${endpoint}/generate`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model: 'llama3.1', prompt: question, stream: false }),
+    body: JSON.stringify({ model: 'llama3.1:latest', prompt: question, stream: false }),
   })
 
   if (!res.ok) {
