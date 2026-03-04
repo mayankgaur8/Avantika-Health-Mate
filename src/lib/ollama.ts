@@ -63,7 +63,8 @@ export interface OllamaChatMessage {
 
 // ─── List available models ────────────────────────────────────────────────────
 
-export const DEFAULT_API_BASE = 'https://api.avantikatechnology.com/api'
+export const DEFAULT_API_BASE =
+  (import.meta.env.VITE_API_BASE ?? 'https://api.avantikatechnology.com') + '/api'
 
 export async function listModels(baseUrl?: string): Promise<OllamaModel[]> {
   const apiBase = baseUrl || DEFAULT_API_BASE

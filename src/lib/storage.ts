@@ -137,7 +137,7 @@ export const profileStore = {
 // ─── App Settings ────────────────────────────────────────────────────────────
 
 const DEFAULT_SETTINGS: AppSettings = {
-  ollamaBaseUrl: '/api',   // relative path — proxied same-origin to avoid CORS
+  ollamaBaseUrl: 'https://api.avantikatechnology.com/api',
   ollamaModel: 'llama3.1:latest',
   ollamaVisionModel: 'llava',
   darkMode: false,
@@ -148,9 +148,9 @@ export const settingsStore = {
   get: (): AppSettings => {
     const stored = get(KEYS.SETTINGS, DEFAULT_SETTINGS)
     const merged = { ...DEFAULT_SETTINGS, ...stored }
-    // Migrate: old absolute domain URL → relative path to fix CORS
-    if (merged.ollamaBaseUrl.includes('avantikatechnology.com')) {
-      merged.ollamaBaseUrl = '/api'
+    // Migrate: old relative /api path → absolute URL
+    if (merged.ollamaBaseUrl === '/api') {
+      merged.ollamaBaseUrl = 'https://api.avantikatechnology.com/api'
     }
     return merged
   },
@@ -158,8 +158,8 @@ export const settingsStore = {
   getOllamaConfig: () => {
     const s = settingsStore.get()
     return {
-      baseUrl: s.ollamaBaseUrl || '/api',
-      model: s.ollamaModel || 'llama3.1',
+      baseUrl: s.ollamaBaseUrl || 'https://api.avantikatechnology.com/api',
+      model: s.ollamaModel || 'llama3.1:latest',
       visionModel: s.ollamaVisionModel || 'llava',
     }
   },
