@@ -137,7 +137,7 @@ export const profileStore = {
 // ─── App Settings ────────────────────────────────────────────────────────────
 
 const DEFAULT_SETTINGS: AppSettings = {
-  ollamaBaseUrl: 'https://api.avantikatechnology.com/api',
+  ollamaBaseUrl: '/api',   // relative path — proxied same-origin to avoid CORS
   ollamaModel: 'llama3.1:latest',
   ollamaVisionModel: 'llava',
   darkMode: false,
@@ -147,14 +147,18 @@ const DEFAULT_SETTINGS: AppSettings = {
 export const settingsStore = {
   get: (): AppSettings => {
     const stored = get(KEYS.SETTINGS, DEFAULT_SETTINGS)
-    // Migrate old API-key-based settings if present
-    return { ...DEFAULT_SETTINGS, ...stored }
+    const merged = { ...DEFAULT_SETTINGS, ...stored }
+    // Migrate: old absolute domain URL → relative path to fix CORS
+    if (merged.ollamaBaseUrl.includes('avantikatechnology.com')) {
+      merged.ollamaBaseUrl = '/api'
+    }
+    return merged
   },
   save: (settings: AppSettings) => set(KEYS.SETTINGS, settings),
   getOllamaConfig: () => {
     const s = settingsStore.get()
     return {
-      baseUrl: s.ollamaBaseUrl || 'https://healthmate.avantikatechnology.com',
+      baseUrl: s.ollamaBaseUrl || '/api',
       model: s.ollamaModel || 'llama3.1',
       visionModel: s.ollamaVisionModel || 'llava',
     }

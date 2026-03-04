@@ -5,11 +5,11 @@ export default defineConfig({
   plugins: [react()],
   server: {
     proxy: {
-      // Proxy /ollama/* → https://healthmate.avantikatechnology.com/* to avoid CORS issues during development
-      '/ollama': {
-        target: 'https://healthmate.avantikatechnology.com',
+      // Proxy /api/* → https://api.avantikatechnology.com/* for local dev (avoids CORS)
+      '/api': {
+        target: 'https://api.avantikatechnology.com',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/ollama/, ''),
+        secure: true,
       },
     },
   },

@@ -182,7 +182,10 @@ export async function sendMessage(options: SendMessageOptions): Promise<string> 
 }
 
 // Add a simple wrapper for the provided generate endpoint to support non-streaming calls
-export const DEFAULT_API_BASE = 'https://api.avantikatechnology.com/api'
+// Relative path — requests stay same-origin, avoiding CORS.
+// Dev: Vite proxies /api/* → https://api.avantikatechnology.com/*
+// Prod: Azure SWA staticwebapp.config.json routes /api/* to the backend.
+export const DEFAULT_API_BASE = '/api'
 
 export async function askAI(question: string, endpoint = DEFAULT_API_BASE): Promise<string> {
   const res = await fetch(`${endpoint}/generate`, {
