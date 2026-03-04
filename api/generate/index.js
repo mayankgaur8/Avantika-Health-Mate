@@ -33,17 +33,27 @@ module.exports = async function (context, req) {
       res.on('data', (chunk) => { data += chunk })
       res.on('end', () => {
         try {
-          context.res = {
-            status: res.statusCode,
-            headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
-            body: JSON.stringify(JSON.parse(data)),
+          // If upstream returned an error status, include its body for debugging
+          if (res.statusCode >= 400) {
+            console.error('Upstream error', { status: res.statusCode, body: data })
+            context.res = {
+              status: res.statusCode,
+              headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+              body: JSON.stringify({ upstreamStatus: res.statusCode, upstreamBody: data }),
+            }
+          } else {
+            context.res = {
+              status: res.statusCode,
+              headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+              body: JSON.stringify(JSON.parse(data)),
+            }
           }
-        } catch {
-          // Upstream returned non-JSON (e.g. NDJSON with stream:true ignored)
-          // Try to extract the first valid JSON line
+        } catch (err) {
+          // Upstream returned non-JSON or parsing failed — return raw body and status
+          console.error('Error parsing upstream response', err)
           const firstLine = data.split('\n').find(l => l.trim().startsWith('{'))
           context.res = {
-            status: 200,
+            status: res.statusCode || 200,
             headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
             body: firstLine ?? JSON.stringify({ response: data, done: true }),
           }

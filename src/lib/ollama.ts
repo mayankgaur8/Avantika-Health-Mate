@@ -63,11 +63,14 @@ export interface OllamaChatMessage {
 
 // ─── List available models ────────────────────────────────────────────────────
 
-export async function listModels(baseUrl: string): Promise<OllamaModel[]> {
+export const DEFAULT_API_BASE = 'https://api.avantikatechnology.com/api'
+
+export async function listModels(baseUrl?: string): Promise<OllamaModel[]> {
+  const apiBase = baseUrl || DEFAULT_API_BASE
   try {
-    const res = await fetch(`${baseUrl}/tags`, { method: 'GET' })
+    const res = await fetch(`${apiBase}/tags`, { method: 'GET' })
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
-    const data = await res.json() as { models: OllamaModel[] }
+    const data = (await res.json()) as { models: OllamaModel[] }
     return data.models ?? []
   } catch {
     return []
@@ -76,9 +79,10 @@ export async function listModels(baseUrl: string): Promise<OllamaModel[]> {
 
 // ─── Check if Ollama is running ───────────────────────────────────────────────
 
-export async function pingOllama(baseUrl: string): Promise<boolean> {
+export async function pingOllama(baseUrl?: string): Promise<boolean> {
+  const apiBase = baseUrl || DEFAULT_API_BASE
   try {
-    const res = await fetch(`${baseUrl}/tags`, { method: 'GET', signal: AbortSignal.timeout(3000) })
+    const res = await fetch(`${apiBase}/tags`, { method: 'GET', signal: AbortSignal.timeout(3000) })
     return res.ok
   } catch {
     return false
@@ -112,6 +116,7 @@ function buildPrompt(
 
 export async function sendMessage(options: SendMessageOptions): Promise<string> {
   const { baseUrl, model, messages, userMessage, imageBase64, onToken } = options
+  const apiBase = baseUrl || DEFAULT_API_BASE
 
   const payload: Record<string, unknown> = {
     model,
@@ -128,7 +133,7 @@ export async function sendMessage(options: SendMessageOptions): Promise<string> 
     payload.images = [imageBase64]
   }
 
-  const response = await fetch(`${baseUrl}/generate`, {
+  const response = await fetch(`${apiBase}/generate`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
@@ -141,7 +146,7 @@ export async function sendMessage(options: SendMessageOptions): Promise<string> 
 
   if (!onToken) {
     // Non-streaming: /generate returns { response: string }
-    const data = await response.json() as { response: string }
+    const data = (await response.json()) as { response: string }
     return data.response
   }
 
@@ -182,11 +187,6 @@ export async function sendMessage(options: SendMessageOptions): Promise<string> 
 }
 
 // Add a simple wrapper for the provided generate endpoint to support non-streaming calls
-// Relative path — requests stay same-origin, avoiding CORS.
-// Dev: Vite proxies /api/* → https://api.avantikatechnology.com/*
-// Prod: Azure SWA staticwebapp.config.json routes /api/* to the backend.
-export const DEFAULT_API_BASE = '/api'
-
 export async function askAI(question: string, endpoint = DEFAULT_API_BASE): Promise<string> {
   const res = await fetch(`${endpoint}/generate`, {
     method: 'POST',
@@ -196,9 +196,9 @@ export async function askAI(question: string, endpoint = DEFAULT_API_BASE): Prom
 
   if (!res.ok) {
     const txt = await res.text()
-    throw new Error(`AI request failed ${res.status}: ${txt}`)
+    throw new Error(`Ollama error ${res.status}: ${txt}`)
   }
 
-  const data = await res.json() as { response?: string }
+  const data = (await res.json()) as { response?: string }
   return data.response ?? ''
 }

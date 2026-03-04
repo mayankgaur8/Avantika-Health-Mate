@@ -1,16 +1,16 @@
 export async function askAI(question: string) {
-  const response = await fetch("https://healthmate.avantikatechnology.com/api/generate", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      model: "llama3.1",
-      prompt: question,
-      stream: false
-    })
-  });
+  const API_BASE = 'https://api.avantikatechnology.com/api'
+  const res = await fetch(`${API_BASE}/generate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ model: 'llama3.1:latest', prompt: question, stream: false }),
+  })
 
-  const data = await response.json();
-  return data.response;
+  if (!res.ok) {
+    const txt = await res.text()
+    throw new Error(`Ollama error ${res.status}: ${txt}`)
+  }
+
+  const data = await res.json()
+  return data.response
 }
