@@ -65,7 +65,7 @@ export interface OllamaChatMessage {
 
 export async function listModels(baseUrl: string): Promise<OllamaModel[]> {
   try {
-    const res = await fetch(`${baseUrl}/api/tags`)
+    const res = await fetch(`${baseUrl}/tags`, { method: 'GET' })
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
     const data = await res.json() as { models: OllamaModel[] }
     return data.models ?? []
@@ -78,7 +78,7 @@ export async function listModels(baseUrl: string): Promise<OllamaModel[]> {
 
 export async function pingOllama(baseUrl: string): Promise<boolean> {
   try {
-    const res = await fetch(`${baseUrl}/api/tags`, { signal: AbortSignal.timeout(3000) })
+    const res = await fetch(`${baseUrl}/tags`, { method: 'GET', signal: AbortSignal.timeout(3000) })
     return res.ok
   } catch {
     return false
@@ -125,7 +125,7 @@ export async function sendMessage(options: SendMessageOptions): Promise<string> 
     },
   }
 
-  const response = await fetch(`${baseUrl}/api/chat`, {
+  const response = await fetch(`${baseUrl}/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
@@ -182,8 +182,10 @@ export async function sendMessage(options: SendMessageOptions): Promise<string> 
 }
 
 // Add a simple wrapper for the provided generate endpoint to support non-streaming calls
-export async function askAI(question: string, endpoint = 'https://healthmate.avantikatechnology.com'): Promise<string> {
-  const res = await fetch(`${endpoint}/api/generate`, {
+export const DEFAULT_API_BASE = 'https://api.avantikatechnology.com/api'
+
+export async function askAI(question: string, endpoint = DEFAULT_API_BASE): Promise<string> {
+  const res = await fetch(`${endpoint}/generate`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ model: 'llama3.1', prompt: question, stream: false }),

@@ -137,7 +137,7 @@ export const profileStore = {
 // ─── App Settings ────────────────────────────────────────────────────────────
 
 const DEFAULT_SETTINGS: AppSettings = {
-  ollamaBaseUrl: 'https://healthmate.avantikatechnology.com',
+  ollamaBaseUrl: 'https://api.avantikatechnology.com/api',
   ollamaModel: 'llama3.1',
   ollamaVisionModel: 'llava',
   darkMode: false,
