@@ -182,7 +182,7 @@ export async function sendMessage(options: SendMessageOptions): Promise<string> 
 }
 
 // Add a simple wrapper for the provided generate endpoint to support non-streaming calls
-export async function askAI(question: string, endpoint = 'http://4.240.92.48:11434'): Promise<string> {
+export async function askAI(question: string, endpoint = 'https://healthmate.avantikatechnology.com'): Promise<string> {
   const res = await fetch(`${endpoint}/api/generate`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

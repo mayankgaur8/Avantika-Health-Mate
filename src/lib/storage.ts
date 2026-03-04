@@ -137,7 +137,7 @@ export const profileStore = {
 // ─── App Settings ────────────────────────────────────────────────────────────
 
 const DEFAULT_SETTINGS: AppSettings = {
-  ollamaBaseUrl: 'http://localhost:11434',
+  ollamaBaseUrl: 'https://healthmate.avantikatechnology.com',
   ollamaModel: 'llama3.1',
   ollamaVisionModel: 'llava',
   darkMode: false,
@@ -154,7 +154,7 @@ export const settingsStore = {
   getOllamaConfig: () => {
     const s = settingsStore.get()
     return {
-      baseUrl: s.ollamaBaseUrl || 'http://localhost:11434',
+      baseUrl: s.ollamaBaseUrl || 'https://healthmate.avantikatechnology.com',
       model: s.ollamaModel || 'llama3.1',
       visionModel: s.ollamaVisionModel || 'llava',
     }
