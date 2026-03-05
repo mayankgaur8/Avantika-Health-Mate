@@ -63,8 +63,11 @@ export interface OllamaChatMessage {
 
 // ─── List available models ────────────────────────────────────────────────────
 
-export const DEFAULT_API_BASE =
-  (import.meta.env.VITE_API_BASE ?? 'https://api.avantikatechnology.com') + '/api'
+// Dev: Vite proxies /api → http://localhost:11434  (local Ollama)
+// Prod: call production API directly via VITE_API_BASE env var
+export const DEFAULT_API_BASE = import.meta.env.DEV
+  ? '/api'
+  : (import.meta.env.VITE_API_BASE ?? 'https://api.avantikatechnology.com') + '/api'
 
 export async function listModels(baseUrl?: string): Promise<OllamaModel[]> {
   const apiBase = baseUrl || DEFAULT_API_BASE

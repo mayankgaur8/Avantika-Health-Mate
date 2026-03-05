@@ -5,11 +5,10 @@ export default defineConfig({
   plugins: [react()],
   server: {
     proxy: {
-      // Proxy /api/* → https://api.avantikatechnology.com/* for local dev (avoids CORS)
+      // In dev, proxy /api/* → local Ollama so you can test without the production server
       '/api': {
-        target: 'https://api.avantikatechnology.com',
+        target: 'http://localhost:11434',
         changeOrigin: true,
-        secure: true,
       },
     },
   },
