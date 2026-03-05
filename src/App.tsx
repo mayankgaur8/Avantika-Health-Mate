@@ -63,7 +63,7 @@ export default function App() {
 
         {/* Page content */}
         <main
-          className={`flex-1 overflow-y-auto ${page === 'chat' ? 'flex flex-col' : 'pb-20 md:pb-0'}`}
+          className={page === 'chat' ? 'flex-1 flex flex-col overflow-hidden' : 'flex-1 overflow-y-auto pb-20 md:pb-0'}
         >
           {renderPage()}
         </main>
