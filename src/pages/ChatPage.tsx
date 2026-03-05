@@ -129,7 +129,7 @@ export function ChatPage() {
   const { model } = settingsStore.getOllamaConfig()
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full pb-20 md:pb-0">
       {/* Emergency banner */}
       {showEmergency && <EmergencyBanner />}
 

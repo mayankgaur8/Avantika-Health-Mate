@@ -82,10 +82,11 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
           value={text}
           onChange={handleTextChange}
           onKeyDown={handleKey}
-          placeholder="Ask HealthMate anything… (Shift+Enter for new line)"
+          placeholder="Ask HealthMate anything…"
           disabled={disabled}
           rows={1}
-          className="flex-1 resize-none rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-2.5 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-400 transition-all disabled:opacity-50"
+          inputMode="text"
+          className="flex-1 resize-none rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-2.5 text-base md:text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-400 transition-all disabled:opacity-50"
           style={{ minHeight: '42px', maxHeight: '120px' }}
         />
 

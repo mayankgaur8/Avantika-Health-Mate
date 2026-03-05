@@ -63,7 +63,10 @@ export function Header({ current, onChange, darkMode, onToggleDark }: HeaderProp
       </header>
 
       {/* Mobile bottom navigation */}
-      <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 flex">
+      <nav
+        className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 flex"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+      >
         {NAV_ITEMS.map(({ id, icon: Icon }) => (
           <button
             key={id}

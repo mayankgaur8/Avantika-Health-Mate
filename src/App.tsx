@@ -43,7 +43,7 @@ export default function App() {
   }
 
   return (
-    <div className={`flex h-screen bg-gray-50 dark:bg-gray-950 font-sans overflow-hidden`}>
+    <div className={`flex h-[100dvh] bg-gray-50 dark:bg-gray-950 font-sans overflow-hidden`}>
       {/* Desktop sidebar */}
       <Sidebar current={page} onChange={setPage} />
 
@@ -63,7 +63,7 @@ export default function App() {
 
         {/* Page content */}
         <main
-          className={`flex-1 overflow-y-auto ${page === 'chat' ? 'flex flex-col' : ''}`}
+          className={`flex-1 overflow-y-auto ${page === 'chat' ? 'flex flex-col' : 'pb-20 md:pb-0'}`}
         >
           {renderPage()}
         </main>
