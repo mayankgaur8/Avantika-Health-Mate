@@ -137,31 +137,21 @@ export const profileStore = {
 // ─── App Settings ────────────────────────────────────────────────────────────
 
 const DEFAULT_SETTINGS: AppSettings = {
-  ollamaBaseUrl: 'https://api.avantikatechnology.com/api',
-  ollamaModel: 'llama3.1:latest',
-  ollamaVisionModel: 'llava',
+  modelPreference: 'cheap',
   darkMode: false,
   notificationsEnabled: false,
 }
 
 export const settingsStore = {
   get: (): AppSettings => {
-    const stored = get(KEYS.SETTINGS, DEFAULT_SETTINGS)
-    const merged = { ...DEFAULT_SETTINGS, ...stored }
-    // Migrate: old relative /api path → absolute URL
-    if (merged.ollamaBaseUrl === '/api') {
-      merged.ollamaBaseUrl = 'https://api.avantikatechnology.com/api'
-    }
-    return merged
+    const stored = get<Partial<AppSettings>>(KEYS.SETTINGS, {})
+    // Merge with defaults so new fields are always present after migration
+    return { ...DEFAULT_SETTINGS, ...stored }
   },
   save: (settings: AppSettings) => set(KEYS.SETTINGS, settings),
-  getOllamaConfig: () => {
+  getAIConfig: () => {
     const s = settingsStore.get()
-    return {
-      baseUrl: s.ollamaBaseUrl || 'https://api.avantikatechnology.com/api',
-      model: s.ollamaModel || 'llama3.1:latest',
-      visionModel: s.ollamaVisionModel || 'llava',
-    }
+    return { modelPreference: s.modelPreference || 'cheap' }
   },
 }
 

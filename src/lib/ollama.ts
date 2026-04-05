@@ -1,4 +1,7 @@
 // ─── System Prompt ────────────────────────────────────────────────────────────
+// Kept here so both ChatPage and UploadPage share the same safety rules.
+// The backend (api/chat/index.js) also embeds this prompt so the AI always
+// receives it — this copy is for reference only.
 
 export const HEALTHMATE_SYSTEM_PROMPT = `You are "HealthMate", a health support chatbot inside a web/mobile app.
 
@@ -47,162 +50,84 @@ export function detectEmergency(text: string): boolean {
   return EMERGENCY_KEYWORDS.some((kw) => lower.includes(kw))
 }
 
+// ─── API endpoint ─────────────────────────────────────────────────────────────
+// Always use the relative /api path — Azure Static Web Apps routes it to the
+// bundled Azure Functions.  Vite dev server proxies it to the Functions emulator
+// on port 7071.
+
+const CHAT_ENDPOINT = '/api/chat'
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export interface OllamaModel {
-  name: string
-  modified_at: string
-  size: number
-}
-
 export interface OllamaChatMessage {
-  role: 'user' | 'assistant' | 'system'
+  role: 'user' | 'assistant'
   content: string
-  images?: string[]  // base64 strings for vision models
 }
-
-// ─── List available models ────────────────────────────────────────────────────
-
-// Dev: Vite proxies /api → http://localhost:11434  (local Ollama)
-// Prod: call production API directly via VITE_API_BASE env var
-export const DEFAULT_API_BASE = import.meta.env.DEV
-  ? '/api'
-  : (import.meta.env.VITE_API_BASE ?? 'https://api.avantikatechnology.com') + '/api'
-
-export async function listModels(baseUrl?: string): Promise<OllamaModel[]> {
-  const apiBase = baseUrl || DEFAULT_API_BASE
-  try {
-    const res = await fetch(`${apiBase}/tags`, { method: 'GET' })
-    if (!res.ok) throw new Error(`HTTP ${res.status}`)
-    const data = (await res.json()) as { models: OllamaModel[] }
-    return data.models ?? []
-  } catch {
-    return []
-  }
-}
-
-// ─── Check if Ollama is running ───────────────────────────────────────────────
-
-export async function pingOllama(baseUrl?: string): Promise<boolean> {
-  const apiBase = baseUrl || DEFAULT_API_BASE
-  try {
-    const res = await fetch(`${apiBase}/tags`, { method: 'GET', signal: AbortSignal.timeout(3000) })
-    return res.ok
-  } catch {
-    return false
-  }
-}
-
-// ─── Send Message (streaming) ─────────────────────────────────────────────────
 
 export interface SendMessageOptions {
-  baseUrl: string
-  model: string
-  messages: { role: 'user' | 'assistant'; content: string }[]
+  messages: OllamaChatMessage[]
   userMessage: string
-  imageBase64?: string    // for vision-capable models
+  imageBase64?: string
+  modelPreference?: 'cheap' | 'premium'
   onToken?: (token: string) => void
 }
 
-// Build a single prompt string from conversation history for /api/generate
-function buildPrompt(
-  messages: { role: 'user' | 'assistant'; content: string }[],
-  userMessage: string
-): string {
-  const lines: string[] = []
-  for (const m of messages) {
-    lines.push(m.role === 'user' ? `Human: ${m.content}` : `Assistant: ${m.content}`)
-  }
-  lines.push(`Human: ${userMessage}`)
-  lines.push('Assistant:')
-  return lines.join('\n')
-}
+// ─── Send message to /api/chat ────────────────────────────────────────────────
 
 export async function sendMessage(options: SendMessageOptions): Promise<string> {
-  const { baseUrl, model, messages, userMessage, imageBase64, onToken } = options
-  const apiBase = baseUrl || DEFAULT_API_BASE
+  const { messages, userMessage, imageBase64, modelPreference = 'cheap', onToken } = options
 
-  const payload: Record<string, unknown> = {
-    model,
-    prompt: buildPrompt(messages, userMessage),
-    system: HEALTHMATE_SYSTEM_PROMPT,
-    stream: !!onToken,
-    options: {
-      temperature: 0.7,
-      num_predict: 2048,
-    },
-  }
-
-  if (imageBase64) {
-    payload.images = [imageBase64]
-  }
-
-  const response = await fetch(`${apiBase}/generate`, {
+  const res = await fetch(CHAT_ENDPOINT, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  })
-
-  if (!response.ok) {
-    const errText = await response.text()
-    throw new Error(`Ollama error ${response.status}: ${errText}`)
-  }
-
-  if (!onToken) {
-    // Non-streaming: /generate returns { response: string }
-    const data = (await response.json()) as { response: string }
-    return data.response
-  }
-
-  // Streaming: NDJSON lines with { response: string, done: boolean }
-  const reader = response.body?.getReader()
-  if (!reader) throw new Error('No response body')
-
-  const decoder = new TextDecoder()
-  let fullText = ''
-  let buffer = ''
-
-  while (true) {
-    const { done, value } = await reader.read()
-    if (done) break
-
-    buffer += decoder.decode(value, { stream: true })
-    const lines = buffer.split('\n')
-    buffer = lines.pop() ?? ''
-
-    for (const line of lines) {
-      const trimmed = line.trim()
-      if (!trimmed) continue
-      try {
-        const chunk = JSON.parse(trimmed) as { response?: string; done: boolean }
-        const token = chunk.response ?? ''
-        if (token) {
-          fullText += token
-          onToken(token)
-        }
-        if (chunk.done) break
-      } catch {
-        // ignore malformed lines
-      }
-    }
-  }
-
-  return fullText
-}
-
-// Add a simple wrapper for the provided generate endpoint to support non-streaming calls
-export async function askAI(question: string, endpoint = DEFAULT_API_BASE): Promise<string> {
-  const res = await fetch(`${endpoint}/generate`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model: 'llama3.1:latest', prompt: question, stream: false }),
+    body: JSON.stringify({
+      message: userMessage,
+      messages,   // conversation history
+      imageBase64,
+      modelPreference,
+    }),
+    signal: AbortSignal.timeout(60_000),
   })
 
   if (!res.ok) {
-    const txt = await res.text()
-    throw new Error(`Ollama error ${res.status}: ${txt}`)
+    let errMsg = `AI service error (${res.status})`
+    try {
+      const body = await res.json() as { error?: string }
+      if (body.error) errMsg = body.error
+    } catch { /* ignore */ }
+    throw new Error(errMsg)
   }
 
-  const data = (await res.json()) as { response?: string }
-  return data.response ?? ''
+  const data = await res.json() as { response: string; model?: string; provider?: string }
+  const text = data.response ?? ''
+
+  // Simulate streaming: deliver full text to onToken in one shot
+  // This keeps ChatPage's streaming-update pattern working while the backend
+  // returns a complete response (non-streaming keeps Azure Function costs low).
+  if (onToken && text) onToken(text)
+
+  return text
+}
+
+// ─── Simple one-shot wrapper ─────────────────────────────────────────────────
+
+export async function askAI(question: string): Promise<string> {
+  return sendMessage({ messages: [], userMessage: question })
+}
+
+// ─── Health check ─────────────────────────────────────────────────────────────
+// Pings the backend by sending a minimal request.
+
+export async function pingAI(): Promise<boolean> {
+  try {
+    const res = await fetch(CHAT_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: 'ping', messages: [] }),
+      signal: AbortSignal.timeout(8_000),
+    })
+    return res.ok || res.status === 400  // 400 = API reachable but bad payload
+  } catch {
+    return false
+  }
 }

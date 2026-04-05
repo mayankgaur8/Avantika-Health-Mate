@@ -1,8 +1,8 @@
 {
   "name": "healthmate-api",
-  "version": "1.0.0",
-  "description": "Azure Functions proxy for Ollama API",
-  "main": "index.js",
+  "private": true,
+  "version": "2.0.0",
+  "description": "Azure Functions backend for Azure Static Web Apps",
   "engines": {
     "node": ">=18.0.0"
   }

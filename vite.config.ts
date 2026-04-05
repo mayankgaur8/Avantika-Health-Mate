@@ -5,9 +5,10 @@ export default defineConfig({
   plugins: [react()],
   server: {
     proxy: {
-      // In dev, proxy /api/* → local Ollama so you can test without the production server
+      // In dev, proxy /api/* → Azure Functions emulator (func start)
+      // Run: cd api && npm install && func start  (port 7071 by default)
       '/api': {
-        target: 'http://localhost:11434',
+        target: 'http://localhost:7071',
         changeOrigin: true,
       },
     },

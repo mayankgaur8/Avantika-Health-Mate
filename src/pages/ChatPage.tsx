@@ -6,7 +6,7 @@ import { EmergencyBanner } from '../components/ui/EmergencyBanner'
 import { sendMessage, detectEmergency } from '../lib/ollama'
 import { settingsStore } from '../lib/storage'
 import type { ChatMessage } from '../types'
-import { AlertCircle, Cpu } from 'lucide-react'
+import { AlertCircle, Sparkles } from 'lucide-react'
 
 function genId() {
   return Math.random().toString(36).slice(2) + Date.now().toString(36)
@@ -17,7 +17,7 @@ const WELCOME: ChatMessage = {
   role: 'assistant',
   content: `# Welcome to HealthMate! 👋
 
-I'm your personal health support companion powered by a **local AI model** (Ollama). Here's how I can help:
+I'm your personal health support companion powered by **cloud AI** (Groq / OpenAI). Here's how I can help:
 
 - **💬 Health Q&A** — Understand symptoms and get general guidance
 - **📋 Prescription Reading** — Upload and understand your prescriptions
@@ -46,10 +46,9 @@ export function ChatPage() {
   }, [messages, isLoading, scrollToBottom])
 
   const handleSend = async (text: string, file?: File) => {
-    const { baseUrl, model, visionModel } = settingsStore.getOllamaConfig()
+    const { modelPreference } = settingsStore.getAIConfig()
     setError('')
 
-    // Emergency check
     if (detectEmergency(text)) {
       setShowEmergency(true)
     }
@@ -65,7 +64,7 @@ export function ChatPage() {
     setMessages((prev) => [...prev, userMsg])
     setIsLoading(true)
 
-    // Streaming placeholder
+    // Placeholder for assistant response
     const assistantId = genId()
     setMessages((prev) => [
       ...prev,
@@ -74,7 +73,6 @@ export function ChatPage() {
 
     try {
       let imageBase64: string | undefined
-      let activeModel = model
 
       if (file && file.type.startsWith('image/')) {
         const buffer = await file.arrayBuffer()
@@ -82,24 +80,18 @@ export function ChatPage() {
         let binary = ''
         bytes.forEach((b) => (binary += String.fromCharCode(b)))
         imageBase64 = btoa(binary)
-        // Switch to vision model for image analysis
-        activeModel = visionModel
       }
 
-      let fullContent = ''
-
       await sendMessage({
-        baseUrl,
-        model: activeModel,
         messages: messages
           .filter((m) => m.id !== 'welcome' && !m.isStreaming)
           .map((m) => ({ role: m.role, content: m.content })),
         userMessage: text,
         imageBase64,
+        modelPreference,
         onToken: (token) => {
-          fullContent += token
           setMessages((prev) =>
-            prev.map((m) => (m.id === assistantId ? { ...m, content: fullContent } : m))
+            prev.map((m) => (m.id === assistantId ? { ...m, content: token } : m))
           )
         },
       })
@@ -109,15 +101,14 @@ export function ChatPage() {
       )
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Unknown error'
-      const isConnectionErr = msg.includes('fetch') || msg.includes('Failed') || msg.includes('ECONNREFUSED')
-      const hint = isConnectionErr
-        ? '\n\n**Is Ollama running?** Open a terminal and run:\n```\nollama serve\n```\nThen make sure you have a model: `ollama pull llama3.1`'
-        : '\n\nCheck your model name in **Settings**.'
-
       setMessages((prev) =>
         prev.map((m) =>
           m.id === assistantId
-            ? { ...m, content: `Sorry, I couldn't reach Ollama: *${msg}*${hint}`, isStreaming: false }
+            ? {
+                ...m,
+                content: `Sorry, I couldn't reach the AI service: *${msg}*\n\nPlease try again. If the issue persists, check **Settings → AI Provider**.`,
+                isStreaming: false,
+              }
             : m
         )
       )
@@ -126,7 +117,8 @@ export function ChatPage() {
     }
   }
 
-  const { model } = settingsStore.getOllamaConfig()
+  const { modelPreference } = settingsStore.getAIConfig()
+  const providerLabel = modelPreference === 'premium' ? 'OpenAI (premium)' : 'Groq (fast)'
 
   return (
     <div className="flex-1 flex flex-col min-h-0">
@@ -141,11 +133,11 @@ export function ChatPage() {
         </div>
       )}
 
-      {/* Model badge */}
+      {/* Provider badge */}
       <div className="flex justify-center pt-3 pb-1 flex-shrink-0">
         <div className="flex items-center gap-1.5 bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 px-3 py-1 rounded-full text-xs">
-          <Cpu size={11} />
-          <span>Local model: <strong>{model}</strong></span>
+          <Sparkles size={11} />
+          <span>AI: <strong>{providerLabel}</strong></span>
         </div>
       </div>
 
@@ -160,7 +152,7 @@ export function ChatPage() {
         <div ref={bottomRef} />
       </div>
 
-      {/* Input — fixed at bottom, clears mobile nav bar */}
+      {/* Input */}
       <div className="flex-shrink-0 pb-16 md:pb-0">
         <ChatInput onSend={handleSend} disabled={isLoading} />
       </div>

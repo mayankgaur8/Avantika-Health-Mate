@@ -33,14 +33,13 @@ export function UploadPage() {
   const fileRef = useRef<HTMLInputElement>(null)
 
   const analyze = async (file: File) => {
-    const { baseUrl, model, visionModel } = settingsStore.getOllamaConfig()
+    const { modelPreference } = settingsStore.getAIConfig()
     setApiError('')
     setIsAnalyzing(true)
 
     try {
       let imageBase64: string | undefined
       let textContent = `Please analyze this medical document: ${file.name}\n\n${UPLOAD_PROMPT}`
-      let activeModel = model
 
       if (file.type.startsWith('image/')) {
         const buffer = await file.arrayBuffer()
@@ -48,18 +47,17 @@ export function UploadPage() {
         let binary = ''
         bytes.forEach((b) => (binary += String.fromCharCode(b)))
         imageBase64 = btoa(binary)
-        activeModel = visionModel
+        // Backend auto-selects a vision-capable model when imageBase64 is present
         textContent = UPLOAD_PROMPT
       } else if (file.type === 'application/pdf') {
         textContent = `The user has uploaded a PDF prescription/report named "${file.name}". Please inform them that for best results with PDF files, they should take a clear photo of the document and re-upload it, or paste the text content in chat. Ask them to describe what they see or paste the text.`
       }
 
       const analysis = await sendMessage({
-        baseUrl,
-        model: activeModel,
         messages: [],
         userMessage: textContent,
         imageBase64,
+        modelPreference,
       })
 
       const report: UploadedReport = {
@@ -75,11 +73,7 @@ export function UploadPage() {
       setExpandedId(report.id)
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Unknown error'
-      const isConnErr = msg.includes('fetch') || msg.includes('Failed')
-      setApiError(isConnErr
-        ? `Ollama not reachable: ${msg}. Make sure Ollama is running (ollama serve) and the model is pulled.`
-        : `Analysis failed: ${msg}`
-      )
+      setApiError(`Analysis failed: ${msg}. Please try again.`)
     } finally {
       setIsAnalyzing(false)
     }
@@ -163,7 +157,7 @@ export function UploadPage() {
       {/* Disclaimer */}
       <div className="mb-6 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-xl px-4 py-3 text-xs text-blue-700 dark:text-blue-300">
         <strong>Note:</strong> HealthMate explains documents in plain language but does not diagnose or prescribe.
-        Images are analyzed locally by your Ollama vision model — nothing leaves your device. This is not medical advice.
+        Images are sent securely to the AI service for analysis. This is not medical advice.
       </div>
 
       {/* Reports list */}

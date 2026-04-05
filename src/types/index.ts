@@ -72,9 +72,8 @@ export interface UploadedReport {
 // ─── App Settings ────────────────────────────────────────────────────────────
 
 export interface AppSettings {
-  ollamaBaseUrl: string     // e.g. 'http://localhost:11434'
-  ollamaModel: string       // e.g. 'llama3.1', 'qwen2.5', 'gemma2'
-  ollamaVisionModel: string // e.g. 'llava', 'llama3.2-vision' (for image uploads)
+  /** 'cheap' → Groq (default)  |  'premium' → OpenAI */
+  modelPreference: 'cheap' | 'premium'
   darkMode: boolean
   notificationsEnabled: boolean
 }

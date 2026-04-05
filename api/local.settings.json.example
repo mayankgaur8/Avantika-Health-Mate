@@ -1,0 +1,18 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "FUNCTIONS_WORKER_RUNTIME": "node",
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+
+    "GROQ_API_KEY": "gsk_YOUR_GROQ_KEY_HERE",
+    "OPENAI_API_KEY": "sk-YOUR_OPENAI_KEY_HERE",
+
+    "GROQ_CHAT_MODEL": "llama-3.3-70b-versatile",
+    "GROQ_VISION_MODEL": "meta-llama/llama-4-scout-17b-16e-instruct",
+    "OPENAI_CHAT_MODEL": "gpt-4o-mini",
+    "OPENAI_VISION_MODEL": "gpt-4o-mini",
+
+    "DEFAULT_MODEL_PREFERENCE": "cheap",
+    "ALLOWED_ORIGIN": "*"
+  }
+}
